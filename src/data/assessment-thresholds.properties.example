@@ -1,0 +1,5 @@
+# Optional. Rename to assessment-thresholds.properties to override the result-band cut points
+# (percent of the maximum score). Review with the Guidance Office first; see docs/ASSESSMENT_METHODOLOGY.md.
+# Must satisfy 0 < moderate < higher < 100, otherwise the defaults are used.
+moderate=33
+higher=66
