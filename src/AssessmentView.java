@@ -41,8 +41,9 @@ class AssessmentView extends View {
     // ----- intro and start -----
     private JPanel intro() {
         RoundPanel card = Staff.card("\uD83D\uDCCB  " + TITLE, null, null);
-        card.add(new WrapText("18 short statements about the past 2 weeks, about 5 minutes. You will get a score for "
-                + "Academic, Social and Personal stress, plus ideas that may help. " + AssessmentService.NOT_DIAGNOSIS
+        card.add(new WrapText("18 short statements about the past 2 weeks, plus 5 questions about how the stress felt (motivating, manageable, "
+                + "overwhelming or hard to recover from), about 5 minutes. Stress is not always bad: you will get a score for "
+                + "Academic, Social and Personal stress, whether it looks more like eustress or distress, plus ideas that may help. " + AssessmentService.NOT_DIAGNOSIS
                 + " Your results are private to you.", 600, Brand.MUTED, 12.5f, false));
         card.add(Staff.gap(12));
         JPanel buttons = new HugPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -62,9 +63,13 @@ class AssessmentView extends View {
     private void start() {
         Student st = user() instanceof Student s ? s : null;
         List<Question> qs = store().getQuestions();
-        int[] answers = AssessmentDialog.run(window, st, TITLE, qs);
-        if (answers == null) return;      // closed early: nothing is scored or saved
-        store().addResult(AssessmentService.score(user().getId(), LocalDate.now(), qs, answers));
+        List<Question> shown = new java.util.ArrayList<>(qs);
+        shown.addAll(AssessmentService.APPRAISAL);      // how the stress felt: motivating, manageable, overwhelming, recovery
+        int[] all = AssessmentDialog.run(window, st, TITLE, shown, qs.size());
+        if (all == null) return;      // closed early: nothing is scored or saved
+        int[] answers = java.util.Arrays.copyOfRange(all, 0, qs.size());
+        int[] appraisal = java.util.Arrays.copyOfRange(all, qs.size(), all.length);
+        store().addResult(AssessmentService.score(user().getId(), LocalDate.now(), qs, answers, appraisal));
         window.refresh();
     }
 
@@ -124,6 +129,10 @@ class AssessmentView extends View {
         box.add(Staff.gap(8));
         box.add(profileLine("Type of stress: " + p.typeLabel(), p.typeMessage(), null));
         box.add(Staff.gap(8));
+        if (p.appraisalLine() != null) {
+            box.add(profileLine("How the demands felt", p.appraisalLine(), null));
+            box.add(Staff.gap(8));
+        }
         StringBuilder detail = new StringBuilder();
         for (Map.Entry<String, Integer> e : p.sourceScores().entrySet())
             detail.append(detail.length() == 0 ? "" : "   \u2022   ").append(e.getKey()).append(" ").append(e.getValue()).append("%");

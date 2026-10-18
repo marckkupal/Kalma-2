@@ -13,6 +13,8 @@ final class AssessmentDialog {
     private final List<Question> qs;
     private final int[] answers;
     private final boolean[] answered;
+    /** Questions before this index are the stress statements. Later ones ask how the stress felt (appraisal). */
+    private final int mainCount;
     private int idx = 0;
     private boolean filipino;
     private boolean finished = false;
@@ -25,8 +27,9 @@ final class AssessmentDialog {
     private final PillToggle tl = new PillToggle("Filipino");
     private final YButton back = YButton.outline("");
 
-    private AssessmentDialog(MainWindow w, Student s, String title, List<Question> qs) {
+    private AssessmentDialog(MainWindow w, Student s, String title, List<Question> qs, int mainCount) {
         this.student = s;
+        this.mainCount = mainCount;
         this.title = title;
         this.qs = qs;
         this.answers = new int[qs.size()];
@@ -92,7 +95,12 @@ final class AssessmentDialog {
      * the window early. Nothing is scored or saved for an unfinished assessment.
      */
     static int[] run(MainWindow w, Student s, String title, List<Question> qs) {
-        AssessmentDialog d = new AssessmentDialog(w, s, title, qs);
+        return run(w, s, title, qs, qs.size());
+    }
+
+    /** Same, where questions from index {@code mainCount} on are introduced as "how the stress felt". */
+    static int[] run(MainWindow w, Student s, String title, List<Question> qs, int mainCount) {
+        AssessmentDialog d = new AssessmentDialog(w, s, title, qs, mainCount);
         d.dlg.setVisible(true);
         return d.finished ? d.answers.clone() : null;
     }
@@ -111,7 +119,10 @@ final class AssessmentDialog {
         lang.setText(filipino ? "Wika ng pagsusulit:" : "Assessment language:");
         back.setText(filipino ? "Bumalik" : "Back");
         back.setVisible(idx > 0);
-        String lead = filipino ? "Sa nakalipas na 2 linggo:" : "In the past 2 weeks:";
+        boolean how = idx >= mainCount;
+        String lead = how ? (filipino ? "Tungkol sa kung ano ang pakiramdam ng stress, sa nakalipas na 2 linggo:"
+                                      : "About how the stress felt, in the past 2 weeks:")
+                          : (filipino ? "Sa nakalipas na 2 linggo:" : "In the past 2 weeks:");
         prompt.removeAll();
         JLabel leadLabel = new JLabel(lead);
         leadLabel.setFont(Theme.BASE.deriveFont(12f));

@@ -1,6 +1,6 @@
 # Wellness and Stress Assessment: Methodology and Rationale
 
-**Version:** v1.0 (matches `AssessmentService.VERSION`)
+**Version:** v1.1 (matches `AssessmentService.VERSION`)
 **Status:** DRAFT for review by the instructor and the Guidance Office. The scoring formula and thresholds below are provisional until signed off (see section 10).
 
 ---
@@ -127,15 +127,47 @@ Values must satisfy 0 < moderate < higher < 100, otherwise the defaults are used
 
 Besides the severity band, each new result carries two descriptive labels (`StressProfile`). Neither is a diagnosis.
 
-**Type of stress** (derived from the bands in section 6):
+**Research basis.** Kalma helps students see that stress is not always negative. *Eustress* (positive stress) can motivate students to prepare for examinations, meet deadlines, learn new skills or reach personal goals; when manageable it can support motivation, focus and performance. *Distress* (negative stress) occurs when stress becomes overwhelming or hard to manage and may go with worry, exhaustion, difficulty concentrating, sleep problems or reduced motivation. The design follows studies of student stress that separate these experiences and look at how students *perceive* the demands they face and their ability to cope:
 
-| Highest band reached (overall or any domain) | Type shown |
+- Gibbons, C., Dempster, M., and Moutray, M. (2008). Stress and eustress in nursing students. *Journal of Advanced Nursing.*
+- Gong, W., and Geertshuis, S. A. (2023). Distress and eustress: An analysis of the stress experiences of offshore international students. *Frontiers in Psychology.*
+
+These studies inform the feature design. They do **not** validate Kalma's custom scoring formula, appraisal items or cut points.
+
+**Design principles.** (1) Not every stressful experience is treated as harmful. (2) Eustress and distress are descriptive labels for a self-reflection tool and are **never medical diagnoses**. (3) The label takes into account how the student perceives the stress (motivating, manageable, overwhelming, hard to recover from), the demands they report (the 18 statements) and their ability to cope.
+
+**Appraisal items.** After the 18 statements the student answers 5 more questions with the same four-option frequency scale (Never to Almost always, "in the past 2 weeks"). They are shown as "About how the stress felt" and exist in English and Filipino (the Filipino wording needs the same native-speaker review as the rest, item 8 in section 10).
+
+| # | Theme | Statement | Used for |
+|---|---|---|---|
+| A1 | Motivating | The pressure I felt helped me get started or stay focused on what mattered. | Motivation |
+| A2 | Motivating | I saw some of my demands as a challenge I wanted to meet. | Motivation |
+| A3 | Manageable | I felt I could manage my demands with the time, skills and support I had. | Strain (reverse-scored) |
+| A4 | Overwhelming | My demands felt overwhelming, as if there was too much to handle at once. | Strain |
+| A5 | Hard to recover | It was hard to recover or bounce back after stressful days. | Strain |
+
+```
+motivation % = (A1 + A2) / 6 x 100
+strain %     = ((3 - A3) + A4 + A5) / 9 x 100          [both rounded to a whole number]
+```
+
+The appraisal items are **not** part of the Academic, Social, Personal or overall scores, so the formula in section 5 is unchanged. They only decide the type of stress and add one line of wording to the result (for example "You described your demands as sometimes motivating and manageable"). The two numbers are saved in a tenth column of `data/assessments.tsv`.
+
+**Type of stress.** "Top band" is the highest band reached by the overall score or any domain (section 6).
+
+| Condition | Type shown |
 |---|---|
-| Higher | **Distress**: stress that feels overwhelming or hard to manage |
-| Moderate | **Eustress**: stress that feels manageable and can be motivating |
-| Low | Low reported stress (neither label applies) |
+| Strain in the higher band (66 or more by default) | **Distress**: stress that feels overwhelming or hard to manage |
+| Top band is higher **and** strain is at least moderate (33 or more) | **Distress** |
+| Top band is higher but strain is below moderate | **Eustress**: heavy demands that the student feels able to manage |
+| Top band is moderate, or strain is moderate, otherwise | **Eustress**: stress that feels manageable and can be motivating |
+| Top band is low and strain is below moderate | Low reported stress (neither label applies) |
 
-*Limit.* The questionnaire asks how often stressors happened, not whether the student found them motivating. The type is therefore inferred from the severity band. It is a manageable-versus-heavy label, not a measure of motivation. If the Guidance Office wants eustress to reflect motivation, add a few appraisal items (for example "the pressure helped me get started") and revise this section and `AssessmentService.VERSION`.
+Strain uses the same two cut points as section 6 so there are no extra thresholds to review. If the appraisal was not answered (results saved before v1.1), the type is inferred from the bands alone, as in v1.0: higher is distress, moderate is eustress, low is low.
+
+*Effect on suggestions.* A higher band **still** lists a Guidance Office consultation first, whatever the appraisal says, so a student who feels fine about heavy demands is still offered a person to talk to. Distress adds a short relaxation exercise. Eustress with moderate or higher demands adds "Use manageable pressure well" (set one small goal and schedule rest after it). The motivation score only changes the wording of the type message.
+
+*Limits.* Five items, two of them motivation, make coarse scores. The strain rule and the pairing of bands and strain are design choices for a self-reflection tool, not validated cut-offs; review them with the Guidance Office (section 10, item 11). Eustress here means "manageable and potentially motivating", not a measured positive emotional state.
 
 **Main source of stress.** Every item is tagged with one source: Academic (4 items), Financial (1), Social (6), Personal or family (4) or Time management (3). Tags never change the domain scores. A source score is its item points divided by its maximum, as a percent.
 
@@ -184,7 +216,7 @@ The student "Possible Solutions" page offers four grounding techniques, each wit
 
 ## 8. Change over time
 
-- Each completed assessment is saved with its date, the three domain scores, the overall score, the formula version, and the stress type and source scores (`data/assessments.tsv`, 9 columns; older 7-column lines still load and simply show no type or source). Unfinished assessments are never scored or saved.
+- Each completed assessment is saved with its date, the three domain scores, the overall score, the formula version, and the stress type and source scores (`data/assessments.tsv`, up to 10 columns; older 7- and 9-column lines still load and simply show no type, source or appraisal). Unfinished assessments are never scored or saved.
 - The student sees a line chart (overall plus the three domains, with the moderate and higher cut points drawn) and a dated list. Selecting a row shows that result in full.
 - A change of **less than 10 points** between two results is described as "about the same". *Rationale:* one answer moving one step moves a domain by about 6 points, so smaller differences are within ordinary variation. Larger changes are described as "higher by N points" or "lower by N points". The 10-point figure is provisional.
 - Trend wording is encouraging when scores fall, and normalising when they rise ("stress often rises during busy periods").
@@ -211,6 +243,7 @@ This table is the review checklist. The scoring formula and thresholds should no
 | 8 | Native-speaker review of the Filipino items and options | Not done | |
 | 9 | Who owns the pilot and later validation (for example comparing scores with a validated instrument in a consenting group)? | Not planned | |
 | 10 | Data retention and consent, including for students who are minors | Not defined | |
+| 11 | Are the 5 appraisal items, the strain formula and the rules that turn strain and bands into eustress or distress acceptable? | Section 6A | |
 
 ## 11. Limitations
 
@@ -231,6 +264,8 @@ Please verify each citation against the original source before submission; these
 - American Psychiatric Association. (2022). *Diagnostic and Statistical Manual of Mental Disorders* (5th ed., text rev.).
 - Baumeister, R. F., and Leary, M. R. (1995). The need to belong: Desire for interpersonal attachments as a fundamental human motivation. *Psychological Bulletin, 117*(3), 497-529.
 - Cohen, S., Kamarck, T., and Mermelstein, R. (1983). A global measure of perceived stress. *Journal of Health and Social Behavior, 24*(4), 385-396.
+- Gibbons, C., Dempster, M., and Moutray, M. (2008). Stress and eustress in nursing students. *Journal of Advanced Nursing.*
+- Gong, W., and Geertshuis, S. A. (2023). Distress and eustress: An analysis of the stress experiences of offshore international students. *Frontiers in Psychology.*
 - Holmes, T. H., and Rahe, R. H. (1967). The Social Readjustment Rating Scale. *Journal of Psychosomatic Research, 11*(2), 213-218.
 - Lazarus, R. S., and Folkman, S. (1984). *Stress, Appraisal, and Coping.* Springer.
 - Misra, R., and McKean, M. (2000). College students' academic stress and its relation to their anxiety, time management, and leisure satisfaction. *American Journal of Health Studies, 16*(1), 41-51.
@@ -238,7 +273,7 @@ Please verify each citation against the original source before submission; these
 
 ## 14. Testing
 
-`AssessmentTest` (run from an empty scratch folder) checks: the item bank (18 items, 6 per domain, 3 reverse-scored, no duplicate or stock-screener wording, both languages present); scoring at the extremes and for worked examples; the overall-equals-average property; the exact band boundaries; threshold overrides and invalid files; change-over-time wording; recommendation rules and that every suggested page exists; the absence of diagnostic words in result text; the stress type, source tagging, mixed and single-item rules, the summary sentence, and saving and reloading of results (with and without the type and source columns).
+`AssessmentTest` (run from an empty scratch folder) checks: the item bank (18 items, 6 per domain, 3 reverse-scored, no duplicate or stock-screener wording, both languages present); scoring at the extremes and for worked examples; the overall-equals-average property; the exact band boundaries; threshold overrides and invalid files; change-over-time wording; recommendation rules and that every suggested page exists; the absence of diagnostic words in result text; the stress type, source tagging, mixed and single-item rules, the summary sentence, the appraisal items and strain and motivation scores, that appraisal never changes the domain scores, eustress versus distress for the same demands, and saving and reloading of results (with and without the type, source and appraisal columns).
 
 ```
 javac -d out *.java
